@@ -20,7 +20,7 @@ The usage is automatically configured to show both sub commands and flags.
 
 #### Example
 
-See the [./example](./example).
+See [./example/main.go](./example/main.go).
 
 #### Limitations
 
