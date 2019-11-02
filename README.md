@@ -18,6 +18,12 @@ the `flag.Parse` call.
 
 The usage is automatically configured to show both sub commands and flags.
 
+#### Positional arguments
+
+The `subcmd` library is opinionated about positional arguments: it enforces their definition
+and parsing. The user can define for each sub command if and how many positional arguments it
+accepts. Their usage is similar to the flag values usage.
+
 #### Example
 
 See [./example/main.go](./example/main.go).
