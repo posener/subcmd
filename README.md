@@ -18,6 +18,12 @@ the `flag.Parse` call.
 
 The usage is automatically configured to show both sub commands and flags.
 
+#### Positional arguments
+
+The `subcmd` library is opinionated about positional arguments: it enforces their definition
+and parsing. The user can define for each sub command if and how many positional arguments it
+accepts. Their usage is similar to the flag values usage.
+
 #### Example
 
 See [./example/main.go](./example/main.go).
@@ -27,6 +33,38 @@ See [./example/main.go](./example/main.go).
 Suppose `cmd` has a flag `-flag`, and a subcommand `sub`. In the current implementation:
 Calling `cmd sub -flag` won't work as the flag is set after the sub command, while
 `cmd -flag sub` will work perfectly fine. Each flag needs to be used in the scope of its command.
+
+## Functions
+
+### func [OptDetails](https://github.com/posener/subcmd/blob/master/subcmd.go#L137)
+
+`func OptDetails(details string) optionFn`
+
+OptSynopsis sets a description to the root command.
+
+### func [OptErrorHandling](https://github.com/posener/subcmd/blob/master/subcmd.go#L109)
+
+`func OptErrorHandling(errorHandling flag.ErrorHandling) optionRootFn`
+
+OptErrorHandling defines the behavior in case of an error in the `Parse` function.
+
+### func [OptName](https://github.com/posener/subcmd/blob/master/subcmd.go#L123)
+
+`func OptName(name string) optionRootFn`
+
+OptName sets a predefined name to the root command.
+
+### func [OptOutput](https://github.com/posener/subcmd/blob/master/subcmd.go#L116)
+
+`func OptOutput(w io.Writer) optionRootFn`
+
+OptOutput sets the output for the usage.
+
+### func [OptSynopsis](https://github.com/posener/subcmd/blob/master/subcmd.go#L130)
+
+`func OptSynopsis(synopsis string) optionRootFn`
+
+OptSynopsis sets a description to the root command.
 
 ## Sub Packages
 
