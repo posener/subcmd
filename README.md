@@ -18,17 +18,25 @@ the `flag.Parse` call.
 
 The usage is automatically configured to show both sub commands and flags.
 
-#### Positional arguments
+#### Principles
 
-The `subcmd` library is opinionated about positional arguments: it enforces their definition
-and parsing. The user can define for each sub command if and how many positional arguments it
-accepts. Their usage is similar to the flag values usage.
+* Minimalistic and `flag`-like.
 
-#### Limitations
+* Any flag that is defined in the base command will be reflected in all of its sub commands.
 
-Suppose `cmd` has a flag `-flag`, and a subcommand `sub`. In the current implementation:
-Calling `cmd sub -flag` won't work as the flag is set after the sub command, while
-`cmd -flag sub` will work perfectly fine. Each flag needs to be used in the scope of its command.
+* When user types the command, it starts from the command and sub commands, only then types the
+flags and then the positional arguments.
+
+* Positional arguments are as any other flag: their number and type should be enforced and
+checked.
+
+* When a command that defined positional arguments, all its sub commands has these positional
+arguments and thus can't define their own positional arguments.
+
+* Usage format is standard, programs can't define their own format.
+
+* When flag configuration is wrong, the program will panic when starts. Most of them in flag
+definition stage, and not after flag parsing stage.
 
 #### Examples
 
