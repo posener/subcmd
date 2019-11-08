@@ -75,6 +75,177 @@ func main() {
 
 ```
 
+##### Args
+
+Usage of positional arguments. If a program accepts positional arguments it must declare it using
+the `Args()` or the `ArgsVar()` methods. Positional arguments can be also defined on sub
+commands.
+
+```golang
+package main
+
+import (
+	"fmt"
+	"github.com/posener/subcmd"
+)
+
+func main() {
+	// Should be defined in global `var`.
+	var (
+		root = subcmd.Root()
+		// Positional arguments can be defined as any other flag.
+		args = root.Args("[args...]", "positional arguments for command line")
+	)
+
+	// Should be in `main()`.
+	root.Parse([]string{"cmd", "v1", "v2", "v3"})
+
+	// Test:
+
+	fmt.Println(*args)
+}
+
+```
+
+ Output:
+
+```
+[v1 v2 v3]
+
+```
+
+##### ArgsFn
+
+Usage of positional arguments with a conversion function.
+
+```golang
+package main
+
+import (
+	"fmt"
+	"github.com/posener/subcmd"
+)
+
+func main() {
+	// Should be defined in global `var`.
+	var (
+		root     = subcmd.Root()
+		src, dst string
+	)
+
+	// A function that convert the positional arguments to the program variables.
+	argsFn := func(args []string) error {
+		if len(args) != 2 {
+			return fmt.Errorf("expected src and dst, got %d arguments", len(args))
+		}
+		src, dst = args[0], args[1]
+		return nil
+	}
+
+	// Should be in `init()`.
+	root.ArgsVar(subcmd.ArgsFn(argsFn), "[src] [dst]", "positional arguments for command line")
+
+	// Should be in `main()`.
+	root.Parse([]string{"cmd", "from.txt", "to.txt"})
+
+	// Test:
+
+	fmt.Println(src, dst)
+}
+
+```
+
+ Output:
+
+```
+from.txt to.txt
+
+```
+
+##### ArgsInt
+
+Usage of positional arguments of a specific type.
+
+```golang
+package main
+
+import (
+	"fmt"
+	"github.com/posener/subcmd"
+)
+
+func main() {
+	// Should be defined in global `var`.
+	var (
+		root = subcmd.Root()
+		// Define positional arguments of type integer.
+		args subcmd.ArgsInt
+	)
+
+	// Should be in `init()`.
+	root.ArgsVar(&args, "[int...]", "numbers to sum")
+
+	// Should be in `main()`.
+	root.Parse([]string{"cmd", "10", "20", "30"})
+
+	// Test:
+
+	sum := 0
+	for _, n := range args {
+		sum += n
+	}
+	fmt.Println(sum)
+}
+
+```
+
+ Output:
+
+```
+60
+
+```
+
+##### ArgsN
+
+Usage of positional arguments with exact number of arguments.
+
+```golang
+package main
+
+import (
+	"fmt"
+	"github.com/posener/subcmd"
+)
+
+func main() {
+	// Should be defined in global `var`.
+	var (
+		root = subcmd.Root()
+		// Define arguments with cap=2 will ensure that the number of arguments is always 2.
+		args = make(subcmd.ArgsStr, 2)
+	)
+
+	// Should be in `init()`.
+	root.ArgsVar(&args, "[src] [dst]", "positional arguments for command line")
+
+	// Should be in `main()`.
+	root.Parse([]string{"cmd", "from.txt", "to.txt"})
+
+	// Test:
+
+	fmt.Println(args)
+}
+
+```
+
+ Output:
+
+```
+[from.txt to.txt]
+
+```
+
 
 ---
 
