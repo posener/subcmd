@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"flag"
+	"io/ioutil"
 	"strings"
 	"testing"
 
@@ -14,14 +15,17 @@ type testCommand struct {
 	*Cmd
 	rootFlag *bool
 
-	sub1     *Cmd
+	sub1     *SubCmd
 	sub1Flag *string
-	sub1Args *[]string
 
-	sub11     *Cmd
+	sub11     *SubCmd
 	sub11Flag *string
+	sub11Args *[]string
 
-	sub2     *Cmd
+	sub12     *SubCmd
+	sub12Flag *string
+
+	sub2     *SubCmd
 	sub2Args ArgsStr
 
 	out bytes.Buffer
@@ -39,14 +43,17 @@ func testRoot() *testCommand {
 		OptSynopsis("cmd synopsis"),
 		OptDetails("testing command line example"))
 
-	root.rootFlag = root.Bool("flag", false, "example of bool flag")
+	root.rootFlag = root.Bool("flag0", false, "example of bool flag")
 
 	root.sub1 = root.SubCommand("sub1", "a sub command with flags and sub commands", OptDetails(longText))
-	root.sub1Flag = root.sub1.String("flag", "", "example of string flag")
-	root.sub1Args = root.sub1.Args("", "")
+	root.sub1Flag = root.sub1.String("flag1", "", "example of string flag")
 
 	root.sub11 = root.sub1.SubCommand("sub1", "sub command of sub command")
-	root.sub11Flag = root.sub11.String("flag", "", "example of string flag")
+	root.sub11Flag = root.sub11.String("flag11", "", "example of string flag")
+	root.sub11Args = root.sub11.Args("", "")
+
+	root.sub12 = root.sub1.SubCommand("sub2", "sub command of sub command")
+	root.sub12Flag = root.sub11.String("flag12", "", "example of string flag")
 
 	root.sub2 = root.SubCommand("sub2", "a sub command without flags and sub commands")
 	root.sub2Args = make(ArgsStr, 0, 1)
@@ -59,6 +66,7 @@ func TestSubCmd(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
+		name        string
 		args        []string
 		wantErr     bool
 		sub1Parsed  bool
@@ -66,84 +74,59 @@ func TestSubCmd(t *testing.T) {
 		sub2Parsed  bool
 		rootFlag    bool
 		sub1Flag    string
-		sub1Args    []string
 		sub11Flag   string
+		sub11Args   []string
 		sub2Args    []string
 	}{
 		{
-			args: []string{"cmd"},
+			name:    "cmd: can't be called without a sub command",
+			args:    []string{"cmd"},
+			wantErr: true,
 		},
 		{
-			args:     []string{"cmd", "-flag"},
-			rootFlag: true,
+			name: "cmd: can be called with help",
+			args: []string{"cmd", "-h"},
 		},
 		{
-			args:       []string{"cmd", "-flag", "sub1", "-flag", "value"},
-			rootFlag:   true,
-			sub1Parsed: true,
-			sub1Flag:   "value",
+			name:    "cmd sub1: can't be called without a sub command",
+			args:    []string{"cmd", "sub1", "-flag0", "-flag1", "value"},
+			wantErr: true,
 		},
 		{
-			args:       []string{"cmd", "sub1", "-flag", "value"},
-			sub1Parsed: true,
-			sub1Flag:   "value",
-		},
-		{
-			args:        []string{"cmd", "sub1", "sub1", "-flag", "value"},
+			name:        "cmd sub1 sub1: with flags and args",
+			args:        []string{"cmd", "sub1", "sub1", "-flag11", "value11", "-flag0", "-flag1", "value1", "arg1", "arg2"},
 			sub1Parsed:  true,
 			sub11Parsed: true,
-			sub11Flag:   "value",
+			rootFlag:    true,
+			sub1Flag:    "value1",
+			sub11Flag:   "value11",
+			sub11Args:   []string{"arg1", "arg2"},
 		},
 		{
-			args:    []string{"cmd", "-no-such-flag"},
+			name:    "cmd sub1 sub2: pass positional argument to a command that does not define positional arguments",
+			args:    []string{"cmd", "sub1", "sub2", "arg1"},
 			wantErr: true,
 		},
 		{
-			args:    []string{"cmd", "-rootflag", "-no-such-flag"},
-			wantErr: true,
-		},
-		{
-			args:    []string{"cmd", "sub1", "-no-such-flag"},
-			wantErr: true,
-		},
-		{
-			args:    []string{"cmd", "arg1"},
-			wantErr: true,
-		},
-		{
-			args:       []string{"cmd", "sub1", "arg1"},
-			sub1Parsed: true,
-			sub1Args:   []string{"arg1"},
-		},
-		{
-			args:       []string{"cmd", "sub1", "arg1", "arg2"},
-			sub1Parsed: true,
-			sub1Args:   []string{"arg1", "arg2"},
-		},
-		{
-			args:       []string{"cmd", "sub1", "-flag", "value", "arg1"},
-			sub1Parsed: true,
-			sub1Flag:   "value",
-			sub1Args:   []string{"arg1"},
-		},
-		{
+			name:       "cmd sub2: with 1 positional arguments",
 			args:       []string{"cmd", "sub2", "arg1"},
 			sub2Parsed: true,
 		},
 		{
+			name:    "cmd sub2: fails with 2 positional arguments",
 			args:    []string{"cmd", "sub2", "arg1", "arg2"},
 			wantErr: true,
 		},
 	}
 
 	for _, tt := range tests {
-		t.Run(strings.Join(tt.args, " "), func(t *testing.T) {
+		t.Run(tt.name, func(t *testing.T) {
 			root := testRoot()
 			err := root.Parse(tt.args)
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
-				assert.NoError(t, err)
+				assert.True(t, err == nil || errors.As(err, &flag.ErrHelp))
 				assert.Equal(t, tt.sub1Parsed, root.sub1.Parsed())
 				assert.Equal(t, tt.sub11Parsed, root.sub11.Parsed())
 				assert.Equal(t, tt.sub2Parsed, root.sub2.Parsed())
@@ -164,7 +147,7 @@ func TestHelp(t *testing.T) {
 	}{
 		{
 			args: []string{"cmd", "-h"},
-			want: `Usage: cmd [flags]
+			want: `Usage: cmd [sub1|sub2]
 
 cmd synopsis
 
@@ -175,16 +158,11 @@ Subcommands:
   sub1	a sub command with flags and sub commands
   sub2	a sub command without flags and sub commands
 
-Flags:
-
-  -flag
-    	example of bool flag
-
 `,
 		},
 		{
 			args: []string{"cmd", "sub1", "-h"},
-			want: `Usage: cmd sub1 [flags] [args...]
+			want: `Usage: cmd sub1 [sub1|sub2]
 
 a sub command with flags and sub commands
 
@@ -198,19 +176,20 @@ a sub command with flags and sub commands
 Subcommands:
 
   sub1	sub command of sub command
-
-Flags:
-
-  -flag string
-    	example of string flag
+  sub2	sub command of sub command
 
 `,
 		},
 		{
 			args: []string{"cmd", "sub2", "-h"},
-			want: `Usage: cmd sub2 [arg]
+			want: `Usage: cmd sub2 [flags] [arg]
 
 a sub command without flags and sub commands
+
+Flags:
+
+  -flag0
+    	example of bool flag
 
 Positional arguments:
 
@@ -220,13 +199,34 @@ Positional arguments:
 		},
 		{
 			args: []string{"cmd", "sub1", "sub1", "-h"},
-			want: `Usage: cmd sub1 sub1 [flags]
+			want: `Usage: cmd sub1 sub1 [flags] [args...]
 
 sub command of sub command
 
 Flags:
 
-  -flag string
+  -flag0
+    	example of bool flag
+  -flag1 string
+    	example of string flag
+  -flag11 string
+    	example of string flag
+  -flag12 string
+    	example of string flag
+
+`,
+		},
+		{
+			args: []string{"cmd", "sub1", "sub2", "-h"},
+			want: `Usage: cmd sub1 sub2 [flags]
+
+sub command of sub command
+
+Flags:
+
+  -flag0
+    	example of bool flag
+  -flag1 string
     	example of string flag
 
 `,
@@ -246,60 +246,85 @@ Flags:
 func TestCmd_failures(t *testing.T) {
 	t.Parallel()
 
-	t.Run("command can't have two sub commands with the same name", func(t *testing.T) {
-		cmd := Root()
-		cmd.SubCommand("sub", "synopsis")
+	t.Run("subcommand valid names", func(t *testing.T) {
+		cmd := Root(OptOutput(ioutil.Discard))
+		assert.Panics(t, func() { cmd.SubCommand("", "") })
+		assert.Panics(t, func() { cmd.SubCommand("-name", "") })
+	})
 
-		assert.Panics(t, func() { cmd.SubCommand("sub", "synopsis") })
+	t.Run("command can't have two sub commands with the same name", func(t *testing.T) {
+		cmd := Root(OptOutput(ioutil.Discard))
+		cmd.SubCommand("sub", "")
+
+		assert.Panics(t, func() { cmd.SubCommand("sub", "") })
 	})
 
 	t.Run("parse must get at least one argument", func(t *testing.T) {
-		cmd := Root()
+		cmd := Root(OptOutput(ioutil.Discard))
 
 		assert.Panics(t, func() { cmd.Parse(nil) })
 	})
 
-	t.Run("both command and sub command have positional arguments should panic", func(t *testing.T) {
-		cmd := Root()
-		cmd.Args("", "")
-		subcmd := cmd.SubCommand("sub", "synopsis")
-		subcmd.Args("", "")
+	t.Run("defining flag after subcommand is not allowed", func(t *testing.T) {
+		cmd := Root(OptOutput(ioutil.Discard))
+		cmd.SubCommand("sub", "")
 
-		assert.Panics(t, func() { cmd.ParseArgs() })
+		assert.Panics(t, func() { cmd.String("flag", "", "") })
+	})
+
+	t.Run("defining args after subcommand is not allowed", func(t *testing.T) {
+		cmd := Root(OptOutput(ioutil.Discard))
+		cmd.SubCommand("sub", "")
+
+		assert.Panics(t, func() { cmd.Args("flag", "") })
+	})
+
+	t.Run("both command and sub command have the same flag name should panic", func(t *testing.T) {
+		cmd := Root(OptOutput(ioutil.Discard))
+		cmd.String("flag", "", "")
+		subcmd := cmd.SubCommand("sub", "")
+
+		assert.Panics(t, func() { subcmd.String("flag", "", "") })
+	})
+
+	t.Run("both command and sub command have positional arguments should panic", func(t *testing.T) {
+		cmd := Root(OptOutput(ioutil.Discard))
+		cmd.Args("", "")
+		subcmd := cmd.SubCommand("sub", "")
+
+		assert.Panics(t, func() { subcmd.Args("", "") })
 	})
 
 	t.Run("both command and sub sub command have positional arguments should panic", func(t *testing.T) {
-		cmd := Root()
+		cmd := Root(OptOutput(ioutil.Discard))
 		cmd.Args("", "")
-		sub := cmd.SubCommand("sub", "synopsis")
-		subsub := sub.SubCommand("sub", "synopsis")
-		subsub.Args("", "")
+		sub := cmd.SubCommand("sub", "")
+		subsub := sub.SubCommand("sub", "")
 
-		assert.Panics(t, func() { cmd.ParseArgs() })
+		assert.Panics(t, func() { subsub.Args("", "") })
 	})
 
 	t.Run("both sub command and sub sub command have positional arguments should panic", func(t *testing.T) {
-		cmd := Root()
-		sub := cmd.SubCommand("sub", "synopsis")
+		cmd := Root(OptOutput(ioutil.Discard))
+		sub := cmd.SubCommand("sub", "")
 		sub.Args("", "")
-		subsub := sub.SubCommand("sub", "synopsis")
-		subsub.Args("", "")
+		subsub := sub.SubCommand("sub", "")
 
-		assert.Panics(t, func() { cmd.ParseArgs() })
+		assert.Panics(t, func() { subsub.Args("", "") })
 	})
 
 	t.Run("two different sub command may have positional arguments", func(t *testing.T) {
-		cmd := Root()
-		sub1 := cmd.SubCommand("sub1", "synopsis")
+		cmd := Root(OptOutput(ioutil.Discard))
+		sub1 := cmd.SubCommand("sub1", "")
 		sub1.Args("", "")
-		sub2 := cmd.SubCommand("sub2", "synopsis")
+		sub2 := cmd.SubCommand("sub2", "")
 		sub2.Args("", "")
 
-		assert.NotPanics(t, func() { cmd.Parse([]string{"cmd"}) })
+		assert.NotPanics(t, func() { cmd.Parse([]string{"cmd", "sub1"}) })
 	})
 
 	t.Run("calling positional more than once is not allowed", func(t *testing.T) {
-		cmd := Root()
+		cmd := Root(OptOutput(ioutil.Discard))
 		cmd.Args("", "")
 
 		assert.Panics(t, func() { cmd.Args("", "") })
