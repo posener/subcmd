@@ -25,7 +25,11 @@ The usage is automatically configured to show both sub commands and flags.
 * Any flag that is defined in the base command will be reflected in all of its sub commands.
 
 * When user types the command, it starts from the command and sub commands, only then types the
-flags and then the positional arguments.
+flags and then the positional arguments:
+
+```go
+[command] [sub commands...] [flags...] [positional args...]
+```
 
 * Positional arguments are as any other flag: their number and type should be enforced and
 checked.
