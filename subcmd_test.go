@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/posener/complete/v2"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -53,7 +54,7 @@ func testNew() *testCommand {
 	cmd.sub11Args = cmd.sub11.Args("", "")
 
 	cmd.sub12 = cmd.sub1.SubCommand("sub2", "sub command of sub command")
-	cmd.sub12Flag = cmd.sub11.String("flag12", "", "example of string flag")
+	cmd.sub12Flag = cmd.sub12.String("flag12", "", "example of string flag")
 
 	cmd.sub2 = cmd.SubCommand("sub2", "a sub command without flags and sub commands")
 	cmd.sub2Args = make(ArgsStr, 0, 1)
@@ -158,6 +159,12 @@ Subcommands:
   sub1	a sub command with flags and sub commands
   sub2	a sub command without flags and sub commands
 
+Bash Completion:
+
+Install bash completion by running: 'COMP_INSTALL=1 cmd'.
+Uninstall by running: 'COMP_UNINSTALL=1 cmd'.
+Skip installation prompt with environment variable: 'COMP_YES=1'.
+
 `,
 		},
 		{
@@ -211,8 +218,6 @@ Flags:
     	example of string flag
   -flag11 string
     	example of string flag
-  -flag12 string
-    	example of string flag
 
 `,
 		},
@@ -227,6 +232,8 @@ Flags:
   -flag0
     	example of bool flag
   -flag1 string
+    	example of string flag
+  -flag12 string
     	example of string flag
 
 `,
@@ -329,4 +336,24 @@ func TestCmd_failures(t *testing.T) {
 
 		assert.Panics(t, func() { cmd.Args("", "") })
 	})
+}
+
+func TestComplete(t *testing.T) {
+	t.Parallel()
+
+	comp := (*completer)(testNew().SubCmd)
+
+	tests := []struct {
+		line        string
+		completions []string
+	}{
+		{line: "su", completions: []string{"sub1", "sub2"}},
+		{line: "sub1 sub1 -f", completions: []string{"-flag1", "-flag0", "-flag11"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.line, func(t *testing.T) {
+			complete.Test(t, comp, tt.line, tt.completions)
+		})
+	}
 }

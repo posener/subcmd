@@ -11,6 +11,8 @@
 //
 // The usage is automatically configured to show both sub commands and flags.
 //
+// Automatic bash completion is enabled for command sub commands and flag names.
+//
 // Principles
 //
 // * Minimalistic and `flag`-like.
@@ -42,6 +44,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/posener/complete/v2"
 	"github.com/posener/formatter"
 )
 
@@ -59,6 +62,8 @@ type SubCmd struct {
 	sub map[string]*SubCmd
 	// args are the positional arguments. If nil the command does not accept positional arguments.
 	args *argsData
+
+	isRoot bool
 }
 
 // argsData contains data about argsData arguments.
@@ -193,8 +198,8 @@ func (c *Cmd) ParseArgs() error {
 
 // Parse a set of arguments.
 func (c *Cmd) Parse(args []string) error {
+	c.complete(args)
 	_, err := c.parse(args)
-
 	return c.handleError(err)
 }
 
@@ -373,6 +378,10 @@ func (c *SubCmd) Usage() {
 			fmt.Fprintf(w, "  %s\t%s\n", name, c.sub[name].synopsis)
 		}
 		fmt.Fprintf(w, "\n")
+		// Print completion options only to the root command.
+		if c.isRoot {
+			fmt.Fprintln(w, completionUsage(c.name))
+		}
 	} else {
 		if c.hasFlags() {
 			fmt.Fprintf(w, "Flags:\n\n")
@@ -404,8 +413,15 @@ func (c *SubCmd) hasFlags() bool {
 	return hasFlags
 }
 
+// complete performs bash completion when required.
+func (c *Cmd) complete(args []string) {
+	complete.Complete(c.name, (*completer)(c.SubCmd))
+}
+
 func newCmd(cfg config) *Cmd {
-	return &Cmd{SubCmd: newSubCmd(cfg, nil)}
+	cmd := &Cmd{SubCmd: newSubCmd(cfg, nil)}
+	cmd.isRoot = true
+	return cmd
 }
 
 func newSubCmd(cfg config, parentFs *flag.FlagSet) *SubCmd {
@@ -437,4 +453,13 @@ func copyFlagSet(cfg config, f *flag.FlagSet) *flag.FlagSet {
 		f.VisitAll(func(fl *flag.Flag) { cp.Var(fl.Value, fl.Name, fl.Usage) })
 	}
 	return cp
+}
+
+func completionUsage(name string) string {
+	return fmt.Sprintf(`Bash Completion:
+
+Install bash completion by running: 'COMP_INSTALL=1 %s'.
+Uninstall by running: 'COMP_UNINSTALL=1 %s'.
+Skip installation prompt with environment variable: 'COMP_YES=1'.
+`, name, name)
 }
