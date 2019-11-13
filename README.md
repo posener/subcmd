@@ -7,7 +7,7 @@
 
 subcmd is a minimalistic library that enables easy sub commands with the standard `flag` library.
 
-Define a `root` command object using the `Root` function.
+Define a root command object using the `New` function.
 This object exposes the standard library's `flag.FlagSet` API, which enables adding flags in the
 standard way.
 Additionally, this object exposes the `SubCommand` method, which returns another command object.
@@ -56,24 +56,26 @@ import (
 )
 
 var (
-	// Define a root command. Some options can be set using the `Opt*` functions. It returns a
+	// Define a cmd command. Some options can be set using the `Opt*` functions. It returns a
 	// `*Cmd` object.
-	root = subcmd.Root()
+	cmd = subcmd.New()
 	// The `*Cmd` object can be used as the standard library `flag.FlagSet`.
-	flag0 = root.String("flag0", "", "root stringflag")
+	flag0 = cmd.String("flag0", "", "root string flag")
+
 	// From each command object, a sub command can be created. This can be done recursively.
-	sub1 = root.SubCommand("sub1", "first sub command")
+	sub1 = cmd.SubCommand("sub1", "first sub command")
 	// Each sub command can have flags attached.
 	flag1 = sub1.String("flag1", "", "sub1 string flag")
-	sub2  = root.SubCommand("sub2", "second sub command")
+
+	sub2  = cmd.SubCommand("sub2", "second sub command")
 	flag2 = sub1.Int("flag2", 0, "sub2 int flag")
 )
 
 // Definition and usage of sub commands and sub commands flags.
 func main() {
 	// In the example we use `Parse()` for a given list of command line arguments. This is useful
-	// for testing, but should be replaced with `root.ParseArgs()` in `main()`
-	root.Parse([]string{"cmd", "sub1", "-flag1", "value"})
+	// for testing, but should be replaced with `cmd.ParseArgs()` in `main()`
+	cmd.Parse([]string{"cmd", "sub1", "-flag1", "value"})
 
 	// Usually the program should switch over the sub commands. The chosen sub command will return
 	// true for the `Parsed()` method.
@@ -104,13 +106,13 @@ import (
 func main() {
 	// Should be defined in global `var`.
 	var (
-		root = subcmd.Root()
+		cmd = subcmd.New()
 		// Positional arguments can be defined as any other flag.
-		args = root.Args("[args...]", "positional arguments for command line")
+		args = cmd.Args("[args...]", "positional arguments for command line")
 	)
 
 	// Should be in `main()`.
-	root.Parse([]string{"cmd", "v1", "v2", "v3"})
+	cmd.Parse([]string{"cmd", "v1", "v2", "v3"})
 
 	// Test:
 
@@ -141,7 +143,7 @@ import (
 func main() {
 	// Should be defined in global `var`.
 	var (
-		root     = subcmd.Root()
+		cmd      = subcmd.New()
 		src, dst string
 	)
 
@@ -155,10 +157,10 @@ func main() {
 	}
 
 	// Should be in `init()`.
-	root.ArgsVar(subcmd.ArgsFn(argsFn), "[src] [dst]", "positional arguments for command line")
+	cmd.ArgsVar(subcmd.ArgsFn(argsFn), "[src] [dst]", "positional arguments for command line")
 
 	// Should be in `main()`.
-	root.Parse([]string{"cmd", "from.txt", "to.txt"})
+	cmd.Parse([]string{"cmd", "from.txt", "to.txt"})
 
 	// Test:
 
@@ -189,16 +191,16 @@ import (
 func main() {
 	// Should be defined in global `var`.
 	var (
-		root = subcmd.Root()
+		cmd = subcmd.New()
 		// Define positional arguments of type integer.
 		args subcmd.ArgsInt
 	)
 
 	// Should be in `init()`.
-	root.ArgsVar(&args, "[int...]", "numbers to sum")
+	cmd.ArgsVar(&args, "[int...]", "numbers to sum")
 
 	// Should be in `main()`.
-	root.Parse([]string{"cmd", "10", "20", "30"})
+	cmd.Parse([]string{"cmd", "10", "20", "30"})
 
 	// Test:
 
@@ -233,16 +235,16 @@ import (
 func main() {
 	// Should be defined in global `var`.
 	var (
-		root = subcmd.Root()
+		cmd = subcmd.New()
 		// Define arguments with cap=2 will ensure that the number of arguments is always 2.
 		args = make(subcmd.ArgsStr, 2)
 	)
 
 	// Should be in `init()`.
-	root.ArgsVar(&args, "[src] [dst]", "positional arguments for command line")
+	cmd.ArgsVar(&args, "[src] [dst]", "positional arguments for command line")
 
 	// Should be in `main()`.
-	root.Parse([]string{"cmd", "from.txt", "to.txt"})
+	cmd.Parse([]string{"cmd", "from.txt", "to.txt"})
 
 	// Test:
 
