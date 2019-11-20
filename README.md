@@ -18,6 +18,8 @@ the `flag.Parse` call.
 
 The usage is automatically configured to show both sub commands and flags.
 
+Automatic bash completion is enabled for command sub commands and flag names.
+
 #### Principles
 
 * Minimalistic and `flag`-like.
@@ -41,6 +43,10 @@ arguments and thus can't define their own positional arguments.
 
 * When flag configuration is wrong, the program will panic when starts. Most of them in flag
 definition stage, and not after flag parsing stage.
+
+## Sub Packages
+
+* [example](./example)
 
 #### Examples
 
