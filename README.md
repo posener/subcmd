@@ -44,10 +44,6 @@ arguments and thus can't define their own positional arguments.
 * When flag configuration is wrong, the program will panic when starts. Most of them in flag
 definition stage, and not after flag parsing stage.
 
-## Sub Packages
-
-* [example](./example)
-
 #### Examples
 
 Definition and usage of sub commands and sub commands flags.
