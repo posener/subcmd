@@ -7,18 +7,30 @@
 
 cmd is a minimalistic library that enables easy sub commands with the standard `flag` library.
 
+This library extends the standard library `flag` package to support sub commands and more
+features in a minimalistic and idiomatic API.
+
+Features:
+
+[x] Sub commands.
+
+[x] Automatic bash completion.
+
+[x] Flag values definition and check.
+
+[x] Explicit positional arguments definition.
+
+[x] Automatic usage text.
+
+#### Usage
+
 Define a root command object using the `New` function.
 This object exposes the standard library's `flag.FlagSet` API, which enables adding flags in the
 standard way.
 Additionally, this object exposes the `SubCommand` method, which returns another command object.
 This objects also exposing the same API, enabling definition of flags and nested sub commands.
-
-The root object then have to be called with the `Parse` or `ParseArgs` methods, similarly to
+The root object then have to be called with the `Parse` method, similarly to
 the `flag.Parse` call.
-
-The usage is automatically configured to show both sub commands and flags.
-
-Automatic bash completion is enabled.
 
 #### Principles
 
@@ -33,16 +45,10 @@ flags and then the positional arguments:
 [command] [sub commands...] [flags...] [positional args...]
 ```
 
-* Positional arguments are as any other flag: their number and type should be enforced and
-checked.
-
-* When a command that defined positional arguments, all its sub commands has these positional
+* When a command defines positional arguments, all its sub commands has these positional
 arguments and thus can't define their own positional arguments.
 
-* Usage format is standard, programs can't define their own format.
-
-* When flag configuration is wrong, the program will panic when starts. Most of them in flag
-definition stage, and not after flag parsing stage.
+* When flag configuration is wrong, the program will panic.
 
 #### Examples
 
@@ -76,7 +82,7 @@ var (
 // Definition and usage of sub commands and sub commands flags.
 func main() {
 	// Parse command line arguments.
-	root.Parse([]string{"cmd", "sub1", "-flag1", "value"})
+	root.ParseArgs("cmd", "sub1", "-flag1", "value")
 
 	// Check which sub command was choses by the user.
 	switch {
@@ -121,7 +127,7 @@ func main() {
 	)
 
 	// Parse fake command line arguments.
-	root.Parse([]string{"cmd", "-flag1", "foo", "-file", "cmd.go", "buz", "bazz"})
+	root.ParseArgs("cmd", "-flag1", "foo", "-file", "cmd.go", "buz", "bazz")
 
 	// Test:
 
@@ -158,7 +164,7 @@ func main() {
 	)
 
 	// Parse fake command line arguments.
-	root.Parse([]string{"cmd", "v1", "v2", "v3"})
+	root.ParseArgs("cmd", "v1", "v2", "v3")
 
 	// Test:
 
@@ -210,7 +216,7 @@ func main() {
 	root.ArgsVar(argsFn, "[src] [dst]", "positional arguments for command line")
 
 	// Should be in `main()`.
-	root.Parse([]string{"cmd", "from.txt", "to.txt"})
+	root.ParseArgs("cmd", "from.txt", "to.txt")
 
 	// Test:
 
@@ -253,7 +259,7 @@ func main() {
 
 	// Should be in `main()`.
 	// Parse fake command line arguments.
-	root.Parse([]string{"cmd", "10", "20", "30"})
+	root.ParseArgs("cmd", "10", "20", "30")
 
 	// Test:
 
@@ -301,7 +307,7 @@ func main() {
 
 	// Should be in `main()`.
 	// Parse fake command line arguments.
-	root.Parse([]string{"cmd", "from.txt", "to.txt"})
+	root.ParseArgs("cmd", "from.txt", "to.txt")
 
 	// Test:
 
