@@ -1,11 +1,11 @@
-# subcmd
+# cmd
 
 [![Build Status](https://travis-ci.org/posener/cmd.svg?branch=master)](https://travis-ci.org/posener/cmd)
 [![codecov](https://codecov.io/gh/posener/cmd/branch/master/graph/badge.svg)](https://codecov.io/gh/posener/cmd)
 [![GoDoc](https://godoc.org/github.com/posener/cmd?status.svg)](http://godoc.org/github.com/posener/cmd)
 [![goreadme](https://goreadme.herokuapp.com/badge/posener/cmd.svg)](https://goreadme.herokuapp.com)
 
-subcmd is a minimalistic library that enables easy sub commands with the standard `flag` library.
+cmd is a minimalistic library that enables easy sub commands with the standard `flag` library.
 
 Define a root command object using the `New` function.
 This object exposes the standard library's `flag.FlagSet` API, which enables adding flags in the
@@ -54,30 +54,30 @@ package main
 import (
 	"fmt"
 
-	"github.com/posener/subcmd"
+	"github.com/posener/cmd"
 )
 
 var (
-	// Define a cmd command. Some options can be set using the `Opt*` functions. It returns a
-	// `*Cmd` object.
-	cmd = subcmd.New()
+	// Define a command. Some options can be set using the `Opt*` functions. It returns a `*Cmd`
+	// object.
+	root = cmd.New()
 	// The `*Cmd` object can be used as the standard library `flag.FlagSet`.
-	flag0 = cmd.String("flag0", "", "root string flag")
+	flag0 = root.String("flag0", "", "root string flag")
 
 	// From each command object, a sub command can be created. This can be done recursively.
-	sub1 = cmd.SubCommand("sub1", "first sub command")
+	sub1 = root.SubCommand("sub1", "first sub command")
 	// Each sub command can have flags attached.
 	flag1 = sub1.String("flag1", "", "sub1 string flag")
 
-	sub2  = cmd.SubCommand("sub2", "second sub command")
+	sub2  = root.SubCommand("sub2", "second sub command")
 	flag2 = sub1.Int("flag2", 0, "sub2 int flag")
 )
 
 // Definition and usage of sub commands and sub commands flags.
 func main() {
 	// In the example we use `Parse()` for a given list of command line arguments. This is useful
-	// for testing, but should be replaced with `cmd.ParseArgs()` in `main()`
-	cmd.Parse([]string{"cmd", "sub1", "-flag1", "value"})
+	// for testing, but should be replaced with `root.ParseArgs()` in `main()`
+	root.Parse([]string{"cmd", "sub1", "-flag1", "value"})
 
 	// Usually the program should switch over the sub commands. The chosen sub command will return
 	// true for the `Parsed()` method.
@@ -102,25 +102,25 @@ package main
 
 import (
 	"fmt"
+	"github.com/posener/cmd"
 	"github.com/posener/complete/v2/predict"
-	"github.com/posener/subcmd"
 )
 
 func main() {
 	// Should be defined in global `var`.
 	var (
-		cmd = subcmd.New()
+		root = cmd.New()
 		// Define a flag with valid values 'foo' and 'bar', and enforce the values by `OptCheck()`.
-		flag1 = cmd.String("flag1", "", "first flag", predict.OptValues("foo", "bar"), predict.OptCheck())
+		flag1 = root.String("flag1", "", "first flag", predict.OptValues("foo", "bar"), predict.OptCheck())
 		// Define a flag with valid values of Go file names.
-		file = cmd.String("file", "", "file path", predict.OptPredictor(predict.Files("*")), predict.OptCheck())
+		file = root.String("file", "", "file path", predict.OptPredictor(predict.Files("*")), predict.OptCheck())
 		// Define positional arguments with valid values 'baz' and 'buzz', and choose not to enforce
 		// the check by not calling `OptCheck`.
-		args = cmd.Args("[args...]", "positional arguments", predict.OptValues("baz", "buzz"))
+		args = root.Args("[args...]", "positional arguments", predict.OptValues("baz", "buzz"))
 	)
 
 	// Should be in `main()`.
-	cmd.Parse([]string{"cmd", "-flag1", "foo", "-file", "subcmd.go", "buz", "bazz"})
+	root.Parse([]string{"cmd", "-flag1", "foo", "-file", "cmd.go", "buz", "bazz"})
 
 	// Test:
 
@@ -132,7 +132,7 @@ func main() {
  Output:
 
 ```
-foo subcmd.go [buz bazz]
+foo cmd.go [buz bazz]
 
 ```
 
@@ -147,19 +147,19 @@ package main
 
 import (
 	"fmt"
-	"github.com/posener/subcmd"
+	"github.com/posener/cmd"
 )
 
 func main() {
 	// Should be defined in global `var`.
 	var (
-		cmd = subcmd.New()
+		root = cmd.New()
 		// Positional arguments can be defined as any other flag.
-		args = cmd.Args("[args...]", "positional arguments for command line")
+		args = root.Args("[args...]", "positional arguments for command line")
 	)
 
 	// Should be in `main()`.
-	cmd.Parse([]string{"cmd", "v1", "v2", "v3"})
+	root.Parse([]string{"cmd", "v1", "v2", "v3"})
 
 	// Test:
 
@@ -184,13 +184,13 @@ package main
 
 import (
 	"fmt"
-	"github.com/posener/subcmd"
+	"github.com/posener/cmd"
 )
 
 func main() {
 	// Should be defined in global `var`.
 	var (
-		cmd      = subcmd.New()
+		root     = cmd.New()
 		src, dst string
 	)
 
@@ -204,10 +204,10 @@ func main() {
 	}
 
 	// Should be in `init()`.
-	cmd.ArgsVar(subcmd.ArgsFn(argsFn), "[src] [dst]", "positional arguments for command line")
+	root.ArgsVar(cmd.ArgsFn(argsFn), "[src] [dst]", "positional arguments for command line")
 
 	// Should be in `main()`.
-	cmd.Parse([]string{"cmd", "from.txt", "to.txt"})
+	root.Parse([]string{"cmd", "from.txt", "to.txt"})
 
 	// Test:
 
@@ -232,22 +232,22 @@ package main
 
 import (
 	"fmt"
-	"github.com/posener/subcmd"
+	"github.com/posener/cmd"
 )
 
 func main() {
 	// Should be defined in global `var`.
 	var (
-		cmd = subcmd.New()
+		root = cmd.New()
 		// Define positional arguments of type integer.
-		args subcmd.ArgsInt
+		args cmd.ArgsInt
 	)
 
 	// Should be in `init()`.
-	cmd.ArgsVar(&args, "[int...]", "numbers to sum")
+	root.ArgsVar(&args, "[int...]", "numbers to sum")
 
 	// Should be in `main()`.
-	cmd.Parse([]string{"cmd", "10", "20", "30"})
+	root.Parse([]string{"cmd", "10", "20", "30"})
 
 	// Test:
 
@@ -276,22 +276,22 @@ package main
 
 import (
 	"fmt"
-	"github.com/posener/subcmd"
+	"github.com/posener/cmd"
 )
 
 func main() {
 	// Should be defined in global `var`.
 	var (
-		cmd = subcmd.New()
+		root = cmd.New()
 		// Define arguments with cap=2 will ensure that the number of arguments is always 2.
-		args = make(subcmd.ArgsStr, 2)
+		args = make(cmd.ArgsStr, 2)
 	)
 
 	// Should be in `init()`.
-	cmd.ArgsVar(&args, "[src] [dst]", "positional arguments for command line")
+	root.ArgsVar(&args, "[src] [dst]", "positional arguments for command line")
 
 	// Should be in `main()`.
-	cmd.Parse([]string{"cmd", "from.txt", "to.txt"})
+	root.Parse([]string{"cmd", "from.txt", "to.txt"})
 
 	// Test:
 
