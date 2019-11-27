@@ -3,27 +3,30 @@ package cmd_test
 import (
 	"fmt"
 
-	"github.com/posener/complete/v2/predict"
 	"github.com/posener/cmd"
+	"github.com/posener/complete/v2/predict"
 )
 
-// Flags and positional arguments can be defined with valid values. It is also possible to enable
-// the check for valid on parsing times. When setting valid values, they will be completed by the
-// bash completion system.
+// An example that shows how to use advanced configuration of flags and positional arguments using
+// the predict package.
 func Example_values() {
-	// Should be defined in global `var`.
 	var (
 		root = cmd.New()
 		// Define a flag with valid values 'foo' and 'bar', and enforce the values by `OptCheck()`.
+		// The defined values will be used for bash completion, and since the OptCheck was set, the
+		// flag value will be checked during the parse call.
 		flag1 = root.String("flag1", "", "first flag", predict.OptValues("foo", "bar"), predict.OptCheck())
-		// Define a flag with valid values of Go file names.
-		file = root.String("file", "", "file path", predict.OptPredictor(predict.Files("*")), predict.OptCheck())
-		// Define positional arguments with valid values 'baz' and 'buzz', and choose not to enforce
-		// the check by not calling `OptCheck`.
+		// Define a flag to accept a valid Go file path. Choose to enforce the valid path using the
+		// `OptCheck` function. The file name will also be completed in the bash completion
+		// processes.
+		file = root.String("file", "", "file path", predict.OptPredictor(predict.Files("*.go")), predict.OptCheck())
+		// Positional arguments should be explicitly defined. Define positional arguments with valid
+		// values of 'baz' and 'buzz', and choose not to enforce these values by not calling
+		// `OptCheck`. These values will also be completed in the bash completion process.
 		args = root.Args("[args...]", "positional arguments", predict.OptValues("baz", "buzz"))
 	)
 
-	// Should be in `main()`.
+	// Parse fake command line arguments.
 	root.Parse([]string{"cmd", "-flag1", "foo", "-file", "cmd.go", "buz", "bazz"})
 
 	// Test:

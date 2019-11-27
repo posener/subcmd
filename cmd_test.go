@@ -2,7 +2,6 @@ package cmd
 
 import (
 	"bytes"
-	"errors"
 	"flag"
 	"io/ioutil"
 	"strings"
@@ -133,7 +132,7 @@ func TestSubCmd(t *testing.T) {
 			if tt.wantErr {
 				assert.Error(t, err)
 			} else {
-				assert.True(t, err == nil || errors.As(err, &flag.ErrHelp))
+				assert.True(t, err == nil || err == flag.ErrHelp)
 				assert.Equal(t, tt.sub1Parsed, root.sub1.Parsed())
 				assert.Equal(t, tt.sub11Parsed, root.sub11.Parsed())
 				assert.Equal(t, tt.sub2Parsed, root.sub2.Parsed())
