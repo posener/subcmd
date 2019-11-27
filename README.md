@@ -53,7 +53,6 @@ package main
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/posener/cmd"
 )
@@ -76,11 +75,8 @@ var (
 
 // Definition and usage of sub commands and sub commands flags.
 func main() {
-	// Set and unset arguments for testing.
-	defer setTestArgs("cmd", "sub1", "-flag1", "value")()
-
 	// Parse command line arguments.
-	root.ParseArgs()
+	root.Parse([]string{"cmd", "sub1", "-flag1", "value"})
 
 	// Check which sub command was choses by the user.
 	switch {
@@ -88,14 +84,6 @@ func main() {
 		fmt.Printf("Called sub1 with flag: %s", *flag1)
 	case sub2.Parsed():
 		fmt.Printf("Called sub2 with flag: %d", *flag2)
-	}
-}
-
-func setTestArgs(args ...string) func() {
-	original := os.Args
-	os.Args = args
-	return func() {
-		os.Args = original
 	}
 }
 
