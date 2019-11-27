@@ -58,29 +58,27 @@ import (
 )
 
 var (
-	// Define a cmd command. Some options can be set using the `Opt*` functions. It returns a
-	// `*Cmd` object.
-	cmd = cmd.New()
-	// The `*Cmd` object can be used as the standard library `flag.FlagSet`.
-	flag0 = cmd.String("flag0", "", "root string flag")
+	// Define root command with a single string flag. This object the familiar standard library
+	// `*flag.FlagSet` API, so it can be used similarly.
+	root  = cmd.New()
+	flag0 = root.String("flag0", "", "root string flag")
 
-	// From each command object, a sub command can be created. This can be done recursively.
-	sub1 = cmd.SubCommand("sub1", "first sub command")
-	// Each sub command can have flags attached.
+	// Define a sub command from the root command with a single string flag. The sub command object
+	// also have the same API as the root command object.
+	sub1  = root.SubCommand("sub1", "first sub command")
 	flag1 = sub1.String("flag1", "", "sub1 string flag")
 
-	sub2  = cmd.SubCommand("sub2", "second sub command")
+	// Define a second sub command from the root command with an int flag.
+	sub2  = root.SubCommand("sub2", "second sub command")
 	flag2 = sub1.Int("flag2", 0, "sub2 int flag")
 )
 
 // Definition and usage of sub commands and sub commands flags.
 func main() {
-	// In the example we use `Parse()` for a given list of command line arguments. This is useful
-	// for testing, but should be replaced with `cmd.ParseArgs()` in `main()`
-	cmd.Parse([]string{"cmd", "sub1", "-flag1", "value"})
+	// Parse command line arguments.
+	root.Parse([]string{"cmd", "sub1", "-flag1", "value"})
 
-	// Usually the program should switch over the sub commands. The chosen sub command will return
-	// true for the `Parsed()` method.
+	// Check which sub command was choses by the user.
 	switch {
 	case sub1.Parsed():
 		fmt.Printf("Called sub1 with flag: %s", *flag1)
@@ -93,34 +91,37 @@ func main() {
 
 ##### Values
 
-Flags and positional arguments can be defined with valid values. It is also possible to enable
-the check for valid on parsing times. When setting valid values, they will be completed by the
-bash completion system.
+An example that shows how to use advanced configuration of flags and positional arguments using
+the predict package.
 
 ```golang
 package main
 
 import (
 	"fmt"
-	"github.com/posener/complete/v2/predict"
 	"github.com/posener/cmd"
+	"github.com/posener/complete/v2/predict"
 )
 
 func main() {
-	// Should be defined in global `var`.
 	var (
-		cmd = cmd.New()
+		root = cmd.New()
 		// Define a flag with valid values 'foo' and 'bar', and enforce the values by `OptCheck()`.
-		flag1 = cmd.String("flag1", "", "first flag", predict.OptValues("foo", "bar"), predict.OptCheck())
-		// Define a flag with valid values of Go file names.
-		file = cmd.String("file", "", "file path", predict.OptPredictor(predict.Files("*")), predict.OptCheck())
-		// Define positional arguments with valid values 'baz' and 'buzz', and choose not to enforce
-		// the check by not calling `OptCheck`.
-		args = cmd.Args("[args...]", "positional arguments", predict.OptValues("baz", "buzz"))
+		// The defined values will be used for bash completion, and since the OptCheck was set, the
+		// flag value will be checked during the parse call.
+		flag1 = root.String("flag1", "", "first flag", predict.OptValues("foo", "bar"), predict.OptCheck())
+		// Define a flag to accept a valid Go file path. Choose to enforce the valid path using the
+		// `OptCheck` function. The file name will also be completed in the bash completion
+		// processes.
+		file = root.String("file", "", "file path", predict.OptPredictor(predict.Files("*.go")), predict.OptCheck())
+		// Positional arguments should be explicitly defined. Define positional arguments with valid
+		// values of 'baz' and 'buzz', and choose not to enforce these values by not calling
+		// `OptCheck`. These values will also be completed in the bash completion process.
+		args = root.Args("[args...]", "positional arguments", predict.OptValues("baz", "buzz"))
 	)
 
-	// Should be in `main()`.
-	cmd.Parse([]string{"cmd", "-flag1", "foo", "-file", "cmd.go", "buz", "bazz"})
+	// Parse fake command line arguments.
+	root.Parse([]string{"cmd", "-flag1", "foo", "-file", "cmd.go", "buz", "bazz"})
 
 	// Test:
 
@@ -138,9 +139,8 @@ foo cmd.go [buz bazz]
 
 ##### Args
 
-Usage of positional arguments. If a program accepts positional arguments it must declare it using
-the `Args()` or the `ArgsVar()` methods. Positional arguments can be also defined on sub
-commands.
+In the cmd package, positional arguments should be explicitly defined. They are defined using the
+`Args` or `ArgsVar` methods.
 
 ```golang
 package main
@@ -151,15 +151,14 @@ import (
 )
 
 func main() {
-	// Should be defined in global `var`.
 	var (
-		cmd = cmd.New()
-		// Positional arguments can be defined as any other flag.
-		args = cmd.Args("[args...]", "positional arguments for command line")
+		root = cmd.New()
+		// Positional arguments should be defined as any other flag.
+		args = root.Args("[args...]", "positional arguments for command line")
 	)
 
-	// Should be in `main()`.
-	cmd.Parse([]string{"cmd", "v1", "v2", "v3"})
+	// Parse fake command line arguments.
+	root.Parse([]string{"cmd", "v1", "v2", "v3"})
 
 	// Test:
 
@@ -177,7 +176,8 @@ func main() {
 
 ##### ArgsFn
 
-Usage of positional arguments with a conversion function.
+An example of how to parse positional arguments using a custom function. It enables the advantage
+of using named variables such as `src` and `dst` as opposed to args[0] and args[1].
 
 ```golang
 package main
@@ -190,24 +190,27 @@ import (
 func main() {
 	// Should be defined in global `var`.
 	var (
-		cmd      = cmd.New()
+		root = cmd.New()
+		// Define variables that will hold the command line positional arguments.
 		src, dst string
 	)
 
-	// A function that convert the positional arguments to the program variables.
-	argsFn := func(args []string) error {
+	// Define an `ArgsFn` that converts a list of positional arguments to the named variables. It
+	// should return an error when the arguments are invalid.
+	argsFn := cmd.ArgsFn(func(args []string) error {
 		if len(args) != 2 {
 			return fmt.Errorf("expected src and dst, got %d arguments", len(args))
 		}
 		src, dst = args[0], args[1]
 		return nil
-	}
+	})
 
 	// Should be in `init()`.
-	cmd.ArgsVar(cmd.ArgsFn(argsFn), "[src] [dst]", "positional arguments for command line")
+	// Register the function in the root command using the `ArgsVar` method.
+	root.ArgsVar(argsFn, "[src] [dst]", "positional arguments for command line")
 
 	// Should be in `main()`.
-	cmd.Parse([]string{"cmd", "from.txt", "to.txt"})
+	root.Parse([]string{"cmd", "from.txt", "to.txt"})
 
 	// Test:
 
@@ -225,7 +228,7 @@ from.txt to.txt
 
 ##### ArgsInt
 
-Usage of positional arguments of a specific type.
+An example of defining int positional arguments.
 
 ```golang
 package main
@@ -238,16 +241,19 @@ import (
 func main() {
 	// Should be defined in global `var`.
 	var (
-		cmd = cmd.New()
-		// Define positional arguments of type integer.
+		root = cmd.New()
+		// Define a variable that will hold the positional arguments values. Use the `ArgsInt` type
+		// to parse them as int.
 		args cmd.ArgsInt
 	)
 
 	// Should be in `init()`.
-	cmd.ArgsVar(&args, "[int...]", "numbers to sum")
+	// Register the positional argument variable in the root command using the `ArgsVar` method.
+	root.ArgsVar(&args, "[int...]", "numbers to sum")
 
 	// Should be in `main()`.
-	cmd.Parse([]string{"cmd", "10", "20", "30"})
+	// Parse fake command line arguments.
+	root.Parse([]string{"cmd", "10", "20", "30"})
 
 	// Test:
 
@@ -269,7 +275,7 @@ func main() {
 
 ##### ArgsN
 
-Usage of positional arguments with exact number of arguments.
+An example of defining an exact number of positional arguments.
 
 ```golang
 package main
@@ -282,16 +288,20 @@ import (
 func main() {
 	// Should be defined in global `var`.
 	var (
-		cmd = cmd.New()
-		// Define arguments with cap=2 will ensure that the number of arguments is always 2.
+		root = cmd.New()
+		// Define a variable that will hold positional arguments. Create the `ArgsStr` object with
+		// cap=2 to ensure that the number of arguments is exactly 2.
 		args = make(cmd.ArgsStr, 2)
 	)
 
 	// Should be in `init()`.
-	cmd.ArgsVar(&args, "[src] [dst]", "positional arguments for command line")
+	// Register the positional argument variable in the root command using the `ArgsVar` method
+	// (similar to the Var methods of the standard library).
+	root.ArgsVar(&args, "[src] [dst]", "positional arguments for command line")
 
 	// Should be in `main()`.
-	cmd.Parse([]string{"cmd", "from.txt", "to.txt"})
+	// Parse fake command line arguments.
+	root.Parse([]string{"cmd", "from.txt", "to.txt"})
 
 	// Test:
 
