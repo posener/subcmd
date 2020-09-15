@@ -402,8 +402,18 @@ func (c *SubCmd) Usage() {
 
 	if len(c.sub) > 0 {
 		fmt.Fprintf(w, "Subcommands:\n\n")
+
+		// Calculate length of longest sub command for padding.
+		subLength := 0
 		for _, name := range subs {
-			fmt.Fprintf(w, "  %s\t%s\n", name, c.sub[name].synopsis)
+			length := len(name)
+			if length > subLength {
+				subLength = length
+			}
+		}
+
+		for _, name := range subs {
+			fmt.Fprintf(w, "  %-*s\t%s\n", subLength, name, c.sub[name].synopsis)
 		}
 		fmt.Fprintf(w, "\n")
 		// Print completion options only to the root command.
