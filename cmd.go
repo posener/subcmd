@@ -123,8 +123,9 @@ type config struct {
 
 // subConfig is configuration that used both for root command and sub commands.
 type subConfig struct {
-	synopsis string
-	details  string
+	synopsis           string
+	details            string
+	completionDisabled bool
 }
 
 // optionRoot is an option that can be applied only on the root command and not on sub commands.
@@ -182,6 +183,12 @@ func OptSynopsis(synopsis string) optionRootFn {
 func OptDetails(details string) optionFn {
 	return func(cfg *subConfig) {
 		cfg.details = details
+	}
+}
+
+func OptCompletion(completionDisabled bool) optionFn {
+	return func(cfg *subConfig) {
+		cfg.completionDisabled = completionDisabled
 	}
 }
 
@@ -407,7 +414,7 @@ func (c *SubCmd) Usage() {
 		}
 		fmt.Fprintf(w, "\n")
 		// Print completion options only to the root command.
-		if c.isRoot {
+		if c.isRoot && !c.completionDisabled {
 			fmt.Fprintln(w, completionUsage(c.name))
 		}
 	} else {

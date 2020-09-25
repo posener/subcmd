@@ -38,7 +38,7 @@ type argsStrComp = ArgsStr
 
 func (a argsStrComp) Predict(_ string) []string { return []string{"one", "two"} }
 
-func newTestCmd() *testCmd {
+func newTestCmd(disableCompletion bool) *testCmd {
 	var root testCmd
 
 	root.Cmd = New(
@@ -46,7 +46,8 @@ func newTestCmd() *testCmd {
 		OptErrorHandling(flag.ContinueOnError),
 		OptOutput(&root.out),
 		OptSynopsis("cmd synopsis"),
-		OptDetails("testing command line example"))
+		OptDetails("testing command line example"),
+		OptCompletion(disableCompletion))
 
 	root.rootFlag = root.Bool("flag0", false, "example of `bool` flag")
 
@@ -126,7 +127,7 @@ func TestSubCmd(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			root := newTestCmd()
+			root := newTestCmd(false)
 			err := root.ParseArgs(tt.args...)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -246,7 +247,112 @@ Flags:
 
 	for _, tt := range tests {
 		t.Run(strings.Join(tt.args, " "), func(t *testing.T) {
-			root := newTestCmd()
+			root := newTestCmd(false)
+			err := root.ParseArgs(tt.args...)
+			assert.Error(t, err)
+			assert.Equal(t, tt.want, root.out.String())
+		})
+	}
+}
+
+func TestHelpWithoutCompletion(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		args []string
+		want string
+	}{
+		{
+			args: []string{"cmd", "-h"},
+			want: `Usage: cmd [sub1|sub2]
+
+cmd synopsis
+
+  testing command line example
+
+Subcommands:
+
+  sub1	a sub command with flags and sub commands
+  sub2	a sub command without flags and sub commands
+
+`,
+		},
+		{
+			args: []string{"cmd", "sub1", "-h"},
+			want: `Usage: cmd sub1 [sub1|sub2]
+
+a sub command with flags and sub commands
+
+  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
+  incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
+  nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
+  Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore
+  eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt
+  in culpa qui officia deserunt mollit anim id est laborum.
+
+Subcommands:
+
+  sub1	sub command of sub command
+  sub2	sub command of sub command
+
+`,
+		},
+		{
+			args: []string{"cmd", "sub2", "-h"},
+			want: `Usage: cmd sub2 [flags] [arg]
+
+a sub command without flags and sub commands
+
+Flags:
+
+  -flag0 bool
+    	example of bool flag
+
+Positional arguments:
+
+  arg is a single argument
+
+`,
+		},
+		{
+			args: []string{"cmd", "sub1", "sub1", "-h"},
+			want: `Usage: cmd sub1 sub1 [flags] [args...]
+
+sub command of sub command
+
+Flags:
+
+  -flag0 bool
+    	example of bool flag
+  -flag1 string
+    	example of string flag
+  -flag11 string
+    	example of string flag
+
+`,
+		},
+		{
+			args: []string{"cmd", "sub1", "sub2", "-h"},
+			want: `Usage: cmd sub1 sub2 [flags]
+
+sub command of sub command
+
+Flags:
+
+  -flag0 bool
+    	example of bool flag
+  -flag1 string
+    	example of string flag
+  -flag12 string
+    	example of string flag
+
+`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(strings.Join(tt.args, " "), func(t *testing.T) {
+			root := newTestCmd(true)
 			err := root.ParseArgs(tt.args...)
 			assert.Error(t, err)
 			assert.Equal(t, tt.want, root.out.String())

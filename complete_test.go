@@ -9,7 +9,7 @@ import (
 func TestComplete(t *testing.T) {
 	t.Parallel()
 
-	comp := (*completer)(newTestCmd().SubCmd)
+	comp := (*completer)(newTestCmd(false).SubCmd)
 
 	tests := []struct {
 		line        string
