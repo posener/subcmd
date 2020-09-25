@@ -324,7 +324,7 @@ func TestCmd_failures(t *testing.T) {
 	})
 
 	t.Run("parse must get at least one argument", func(t *testing.T) {
-		root := New(OptOutput(ioutil.Discard), OptErrorHandling(flag.PanicOnError))
+		root := New(OptOutput(ioutil.Discard))
 
 		assert.Panics(t, func() { root.ParseArgs() })
 	})
