@@ -394,4 +394,13 @@ func TestCmd_failures(t *testing.T) {
 
 		assert.Panics(t, func() { root.Args("", "") })
 	})
+
+	t.Run("calling without sub commands fails with usage", func(t *testing.T) {
+		root := New(OptOutput(ioutil.Discard), OptErrorHandling(flag.ContinueOnError))
+		root.SubCommand("sub1", "")
+
+		if err := root.ParseArgs("cmd"); assert.Error(t, err) {
+			assert.EqualError(t, err, "must provide sub command")
+		}
+	})
 }
