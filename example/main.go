@@ -23,13 +23,13 @@ var (
 )
 
 func main() {
-	root.ParseArgs()
+	_=	root.Parse()
 
-	// Check which sub command was choses by the user.
+	// Check which sub command was chosen by the user.
 	switch {
 	case sub1.Parsed():
-		fmt.Printf("Called sub1 with flag: %s", *flag1)
+		fmt.Printf("Called sub1 with flags: %s", *flag1)
 	case sub2.Parsed():
-		fmt.Printf("Called sub2 with flag: %d", *flag2)
+		fmt.Printf("Called sub2 with flags: %d", *flag2)
 	}
 }
