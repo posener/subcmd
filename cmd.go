@@ -302,7 +302,8 @@ func (c *SubCmd) ArgsVar(value ArgsValue, usage, details string, options ...pred
 
 func (c *SubCmd) parse(args []string) ([]string, error) {
 	if len(args) < 1 {
-		panic("must be at least the command in arguments")
+		c.Usage()
+		return nil, flag.ErrHelp
 	}
 
 	c.checkFlagsTree(make(map[string]bool))

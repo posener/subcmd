@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"io/ioutil"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -289,7 +290,7 @@ func TestCmd_valueCheck(t *testing.T) {
 
 		assert.NoError(t, root.ParseArgs("cmd", "-file", "cmd.go"))
 		assert.NoError(t, root.ParseArgs("cmd", "-file", "./cmd.go"))
-		assert.NoError(t, root.ParseArgs("cmd", "-file", "example/main.go"))
+		assert.NoError(t, root.ParseArgs("cmd", "-file", filepath.Join("example", "main.go")))
 		assert.Error(t, root.ParseArgs("cmd", "-file", "no-such-file.go"))
 		assert.Error(t, root.ParseArgs("cmd", "-file", "README.md"))
 
@@ -323,7 +324,7 @@ func TestCmd_failures(t *testing.T) {
 	})
 
 	t.Run("parse must get at least one argument", func(t *testing.T) {
-		root := New(OptOutput(ioutil.Discard))
+		root := New(OptOutput(ioutil.Discard), OptErrorHandling(flag.PanicOnError))
 
 		assert.Panics(t, func() { root.ParseArgs() })
 	})
