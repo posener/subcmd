@@ -23,7 +23,7 @@ var (
 )
 
 func main() {
-	_= root.Parse()
+	root.Parse()
 
 	// Check which sub command was chosen by the user.
 	switch {
