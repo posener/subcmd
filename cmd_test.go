@@ -4,11 +4,13 @@ import (
 	"bytes"
 	"flag"
 	"io/ioutil"
+	"os"
 	"strings"
 	"testing"
 
 	"github.com/posener/complete/v2/predict"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 type testCmd struct {
@@ -38,7 +40,7 @@ type argsStrComp = ArgsStr
 
 func (a argsStrComp) Predict(_ string) []string { return []string{"one", "two"} }
 
-func newTestCmd(disableCompletion bool) *testCmd {
+func newTestCmd() *testCmd {
 	var root testCmd
 
 	root.Cmd = New(
@@ -46,8 +48,7 @@ func newTestCmd(disableCompletion bool) *testCmd {
 		OptErrorHandling(flag.ContinueOnError),
 		OptOutput(&root.out),
 		OptSynopsis("cmd synopsis"),
-		OptDetails("testing command line example"),
-		OptCompletion(disableCompletion))
+		OptDetails("testing command line example"))
 
 	root.rootFlag = root.Bool("flag0", false, "example of `bool` flag")
 
@@ -127,7 +128,7 @@ func TestSubCmd(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			root := newTestCmd(false)
+			root := newTestCmd()
 			err := root.ParseArgs(tt.args...)
 			if tt.wantErr {
 				assert.Error(t, err)
@@ -148,10 +149,12 @@ func TestHelp(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
+		shell string
 		args []string
 		want string
 	}{
 		{
+			shell: "/bin/bash",
 			args: []string{"cmd", "-h"},
 			want: `Usage: cmd [sub1|sub2]
 
@@ -173,96 +176,51 @@ Skip installation prompt with environment variable: 'COMP_YES=1'.
 `,
 		},
 		{
-			args: []string{"cmd", "sub1", "-h"},
-			want: `Usage: cmd sub1 [sub1|sub2]
+			shell: "/bin/fish",
+			args: []string{"cmd", "-h"},
+			want: `Usage: cmd [sub1|sub2]
 
-a sub command with flags and sub commands
+cmd synopsis
 
-  Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor
-  incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis
-  nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
-  Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore
-  eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt
-  in culpa qui officia deserunt mollit anim id est laborum.
+  testing command line example
 
 Subcommands:
 
-  sub1	sub command of sub command
-  sub2	sub command of sub command
+  sub1	a sub command with flags and sub commands
+  sub2	a sub command without flags and sub commands
+
+Bash Completion:
+
+Install bash completion by running: 'COMP_INSTALL=1 cmd'.
+Uninstall by running: 'COMP_UNINSTALL=1 cmd'.
+Skip installation prompt with environment variable: 'COMP_YES=1'.
 
 `,
 		},
 		{
-			args: []string{"cmd", "sub2", "-h"},
-			want: `Usage: cmd sub2 [flags] [arg]
+			shell: "/bin/zsh",
+			args: []string{"cmd", "-h"},
+			want: `Usage: cmd [sub1|sub2]
 
-a sub command without flags and sub commands
+cmd synopsis
 
-Flags:
+  testing command line example
 
-  -flag0 bool
-    	example of bool flag
+Subcommands:
 
-Positional arguments:
+  sub1	a sub command with flags and sub commands
+  sub2	a sub command without flags and sub commands
 
-  arg is a single argument
+Bash Completion:
 
-`,
-		},
-		{
-			args: []string{"cmd", "sub1", "sub1", "-h"},
-			want: `Usage: cmd sub1 sub1 [flags] [args...]
-
-sub command of sub command
-
-Flags:
-
-  -flag0 bool
-    	example of bool flag
-  -flag1 string
-    	example of string flag
-  -flag11 string
-    	example of string flag
+Install bash completion by running: 'COMP_INSTALL=1 cmd'.
+Uninstall by running: 'COMP_UNINSTALL=1 cmd'.
+Skip installation prompt with environment variable: 'COMP_YES=1'.
 
 `,
 		},
 		{
-			args: []string{"cmd", "sub1", "sub2", "-h"},
-			want: `Usage: cmd sub1 sub2 [flags]
-
-sub command of sub command
-
-Flags:
-
-  -flag0 bool
-    	example of bool flag
-  -flag1 string
-    	example of string flag
-  -flag12 string
-    	example of string flag
-
-`,
-		},
-	}
-
-	for _, tt := range tests {
-		t.Run(strings.Join(tt.args, " "), func(t *testing.T) {
-			root := newTestCmd(false)
-			err := root.ParseArgs(tt.args...)
-			assert.Error(t, err)
-			assert.Equal(t, tt.want, root.out.String())
-		})
-	}
-}
-
-func TestHelpWithoutCompletion(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		args []string
-		want string
-	}{
-		{
+			shell: "",
 			args: []string{"cmd", "-h"},
 			want: `Usage: cmd [sub1|sub2]
 
@@ -278,6 +236,7 @@ Subcommands:
 `,
 		},
 		{
+			shell: "/bin/bash",
 			args: []string{"cmd", "sub1", "-h"},
 			want: `Usage: cmd sub1 [sub1|sub2]
 
@@ -298,6 +257,7 @@ Subcommands:
 `,
 		},
 		{
+			shell: "/bin/bash",
 			args: []string{"cmd", "sub2", "-h"},
 			want: `Usage: cmd sub2 [flags] [arg]
 
@@ -315,6 +275,7 @@ Positional arguments:
 `,
 		},
 		{
+			shell: "/bin/bash",
 			args: []string{"cmd", "sub1", "sub1", "-h"},
 			want: `Usage: cmd sub1 sub1 [flags] [args...]
 
@@ -332,6 +293,7 @@ Flags:
 `,
 		},
 		{
+			shell: "/bin/bash",
 			args: []string{"cmd", "sub1", "sub2", "-h"},
 			want: `Usage: cmd sub1 sub2 [flags]
 
@@ -352,7 +314,9 @@ Flags:
 
 	for _, tt := range tests {
 		t.Run(strings.Join(tt.args, " "), func(t *testing.T) {
-			root := newTestCmd(true)
+			require.NoError(t, os.Setenv("SHELL", tt.shell))
+
+			root := newTestCmd()
 			err := root.ParseArgs(tt.args...)
 			assert.Error(t, err)
 			assert.Equal(t, tt.want, root.out.String())

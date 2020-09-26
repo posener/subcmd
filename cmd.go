@@ -47,6 +47,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"sort"
 	"strings"
 
@@ -116,16 +117,16 @@ func (f ArgsFn) Set(args []string) error { return f(args) }
 // config is configuration for root command.
 type config struct {
 	subConfig
-	name          string
-	errorHandling flag.ErrorHandling
-	output        io.Writer
+	name              string
+	errorHandling     flag.ErrorHandling
+	output            io.Writer
+	completionEnabled bool
 }
 
 // subConfig is configuration that used both for root command and sub commands.
 type subConfig struct {
-	synopsis           string
-	details            string
-	completionDisabled bool
+	synopsis string
+	details  string
 }
 
 // optionRoot is an option that can be applied only on the root command and not on sub commands.
@@ -186,19 +187,14 @@ func OptDetails(details string) optionFn {
 	}
 }
 
-func OptCompletion(completionDisabled bool) optionFn {
-	return func(cfg *subConfig) {
-		cfg.completionDisabled = completionDisabled
-	}
-}
-
 // New creates a new root command.
 func New(options ...optionRoot) *Cmd {
 	// Set default config.
 	cfg := config{
-		name:          os.Args[0],
-		errorHandling: flag.ExitOnError,
-		output:        os.Stderr,
+		name:              os.Args[0],
+		errorHandling:     flag.ExitOnError,
+		output:            os.Stderr,
+		completionEnabled: detectCompletionSupport(),
 	}
 	// Update with requested options.
 	for _, option := range options {
@@ -414,7 +410,7 @@ func (c *SubCmd) Usage() {
 		}
 		fmt.Fprintf(w, "\n")
 		// Print completion options only to the root command.
-		if c.isRoot && !c.completionDisabled {
+		if c.isRoot && c.completionEnabled {
 			fmt.Fprintln(w, completionUsage(c.name))
 		}
 	} else {
@@ -500,6 +496,15 @@ func copyFlagSet(cfg config, f *compflag.FlagSet) *compflag.FlagSet {
 		f.VisitAll(func(fl *flag.Flag) { cp.Var(fl.Value, fl.Name, fl.Usage) })
 	}
 	return (*compflag.FlagSet)(cp)
+}
+
+func detectCompletionSupport() bool {
+	if shellPath, ok := os.LookupEnv("SHELL"); ok {
+		shellName := strings.ToLower(filepath.Base(shellPath))
+		return shellName == "bash" || shellName == "fish" || shellName == "zsh"
+	}
+
+	return false
 }
 
 func completionUsage(name string) string {
