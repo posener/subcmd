@@ -120,7 +120,6 @@ type config struct {
 	name              string
 	errorHandling     flag.ErrorHandling
 	output            io.Writer
-	completionEnabled bool
 }
 
 // subConfig is configuration that used both for root command and sub commands.
@@ -194,7 +193,6 @@ func New(options ...optionRoot) *Cmd {
 		name:              os.Args[0],
 		errorHandling:     flag.ExitOnError,
 		output:            os.Stderr,
-		completionEnabled: detectCompletionSupport(),
 	}
 	// Update with requested options.
 	for _, option := range options {
@@ -410,7 +408,7 @@ func (c *SubCmd) Usage() {
 		}
 		fmt.Fprintf(w, "\n")
 		// Print completion options only to the root command.
-		if c.isRoot && c.completionEnabled {
+		if c.isRoot && detectCompletionSupport() {
 			fmt.Fprintln(w, completionUsage(c.name))
 		}
 	} else {
@@ -499,12 +497,8 @@ func copyFlagSet(cfg config, f *compflag.FlagSet) *compflag.FlagSet {
 }
 
 func detectCompletionSupport() bool {
-	if shellPath, ok := os.LookupEnv("SHELL"); ok {
-		shellName := strings.ToLower(filepath.Base(shellPath))
-		return shellName == "bash" || shellName == "fish" || shellName == "zsh"
-	}
-
-	return false
+	shellName := strings.ToLower(filepath.Base(os.Getenv("SHELL")))
+	return shellName == "bash" || shellName == "fish" || shellName == "zsh"
 }
 
 func completionUsage(name string) string {

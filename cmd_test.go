@@ -146,8 +146,6 @@ func TestSubCmd(t *testing.T) {
 }
 
 func TestHelp(t *testing.T) {
-	t.Parallel()
-
 	tests := []struct {
 		shell string
 		args []string
@@ -314,6 +312,8 @@ Flags:
 
 	for _, tt := range tests {
 		t.Run(strings.Join(tt.args, " "), func(t *testing.T) {
+			previousShell := os.Getenv("SHELL")
+			defer os.Setenv("SHELL", previousShell)
 			require.NoError(t, os.Setenv("SHELL", tt.shell))
 
 			root := newTestCmd()
