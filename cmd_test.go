@@ -5,6 +5,7 @@ import (
 	"flag"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -359,7 +360,7 @@ func TestCmd_valueCheck(t *testing.T) {
 
 		assert.NoError(t, root.ParseArgs("cmd", "-file", "cmd.go"))
 		assert.NoError(t, root.ParseArgs("cmd", "-file", "./cmd.go"))
-		assert.NoError(t, root.ParseArgs("cmd", "-file", "example/main.go"))
+		assert.NoError(t, root.ParseArgs("cmd", "-file", filepath.Join("example", "main.go")))
 		assert.Error(t, root.ParseArgs("cmd", "-file", "no-such-file.go"))
 		assert.Error(t, root.ParseArgs("cmd", "-file", "README.md"))
 
@@ -462,5 +463,14 @@ func TestCmd_failures(t *testing.T) {
 		root.Args("", "")
 
 		assert.Panics(t, func() { root.Args("", "") })
+	})
+
+	t.Run("calling without sub commands fails with usage", func(t *testing.T) {
+		root := New(OptOutput(ioutil.Discard), OptErrorHandling(flag.ContinueOnError))
+		root.SubCommand("sub1", "")
+
+		if err := root.ParseArgs("cmd"); assert.Error(t, err) {
+			assert.EqualError(t, err, "must provide sub command")
+		}
 	})
 }
