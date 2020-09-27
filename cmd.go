@@ -117,9 +117,9 @@ func (f ArgsFn) Set(args []string) error { return f(args) }
 // config is configuration for root command.
 type config struct {
 	subConfig
-	name              string
-	errorHandling     flag.ErrorHandling
-	output            io.Writer
+	name          string
+	errorHandling flag.ErrorHandling
+	output        io.Writer
 }
 
 // subConfig is configuration that used both for root command and sub commands.
@@ -190,9 +190,9 @@ func OptDetails(details string) optionFn {
 func New(options ...optionRoot) *Cmd {
 	// Set default config.
 	cfg := config{
-		name:              os.Args[0],
-		errorHandling:     flag.ExitOnError,
-		output:            os.Stderr,
+		name:          os.Args[0],
+		errorHandling: flag.ExitOnError,
+		output:        os.Stderr,
 	}
 	// Update with requested options.
 	for _, option := range options {
