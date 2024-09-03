@@ -19,7 +19,7 @@ var (
 
 	// Define a second sub command from the root command with an int flag.
 	sub2  = root.SubCommand("sub2", "second sub command")
-	flag2 = sub1.Int("flag2", 0, "sub2 int flag")
+	flag2 = sub2.Int("flag2", 0, "sub2 int flag")
 )
 
 // Definition and usage of sub commands and sub commands flags.
